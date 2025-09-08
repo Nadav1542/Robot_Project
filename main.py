@@ -52,7 +52,7 @@ if __name__ == "__main__":
     
         # --- tuning knobs ---
     TARGET = math.pi / 2                    # 90° in radians
-    DEADBAND = math.radians(20)              # ±10° window where we don't move
+    DEADBAND = math.radians(15)              # ±10° window where we don't move
     KP = 1.2                                # proportional gain -> how strongly to turn
     MAX_WZ = 1.0                            # cap on angular command sent to Move()
     DT = 0.02                               # 20 ms loop
@@ -60,22 +60,23 @@ if __name__ == "__main__":
     
 
 
-
-
-
-
-
-
-    # t_end = time.time() + 150 # run for 30 seconds
-    # while time.time() < t_end:
-    #     current_orientation = state_manager.remote_state.orientation_est
-    #     print(f"[UWB] Current Orientation: {current_orientation:.2f}")
-    #     if current_orientation < TARGET:
-    #         obstacles_avoid_client.Move(1, 0.0, 0.0)
-    #         time.sleep(5)
-    #     if current_orientation > TARGET:
-    #         obstacles_avoid_client.Move(1, 0.0, 0.0)
-    #         time.sleep(5)
+    t_end = time.time() + 150 # run for 30 seconds
+    while time.time() < t_end:
+        current_orientation = state_manager.remote_state.orientation_est
+        print(f"[UWB] Current Orientation: {current_orientation:.2f}")
+        if current_orientation < TARGET - DEADBAND:
+            obstacles_avoid_client.Move(0.5, 0.0, 0.0)
+            time.sleep(0.1)
+        elif current_orientation > TARGET + DEADBAND:
+            obstacles_avoid_client.Move(-0.5, 0.0, 0.0)
+            time.sleep(0.1)
+        else:
+             obstacles_avoid_client.Move(0.0, 0.0, 0.0)
+             time.sleep(0.1)             
+    
+    
+    
+    
     # #     # if TARGET - DEADBAND < current_orientation < TARGET + DEADBAND:
     # #     #     # inside the quiet zone → hold still
     # #     #     obstacles_avoid_client.Move(0.0, 0.0, 0.0)
