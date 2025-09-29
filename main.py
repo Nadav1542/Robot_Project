@@ -68,7 +68,7 @@ def rotation_by_yaw(self):
 rotation by angle of remote location from robot head
 acceleration spining dependes on error
 """
-def rotation_by_orientation(self):
+def rotation_by_orientation():
     # --- Adaptive rotation settings ---
     MAX_WZ = 0.96                # hard speed limit (rad/s)
     DT = 0.04                   # control loop (s)
@@ -82,7 +82,7 @@ def rotation_by_orientation(self):
         # Target is 0 rad. Compute shortest signed error and apply a simple,
         # piecewise-linear speed map that tapers near the target.
         # ori - 0
-        err = ori
+        err = ori - (2/3) * math.pi  # adjusting orientation to yaw
 
         if abs(err) <= DEAD_BAND:
             wz = 0.0
@@ -174,7 +174,7 @@ def walk_me():
       # --- Adaptive distance settings ---
     MAX_VX = 0.9               # hard speed limit (m/s)
     DT = 0.04                   # control loop (s)
-    DEAD_BAND_D = 1.2            # stop when within ±1.2 m
+    DEAD_BAND_D = 1.6            # stop when within ±1.6 m
     DIST_SLOWDOWN  = 1.0         # start tapering below 1.0 m
 
 
@@ -204,10 +204,15 @@ def walk_me():
             vx = max(min(vx, MAX_VX), -MAX_VX)  # enforce hard limit
         else:
             vx = 0.0
-            break
+            
         obstacles_avoid_client.Move(vx, 0, wz)
         time.sleep(DT)
 
+def stop(obstacles_avoid_client):
+        """Stop all movement."""
+        print("Stopping all movement.")
+        obstacles_avoid_client.Move(0, 0, 0)  # Stop obstacle avoidance movement
+        obstacles_avoid_client.UseRemoteCommandFromApi(False)
 
 if __name__ == "__main__":
     state_manager = UwbStateManager()
@@ -228,8 +233,8 @@ if __name__ == "__main__":
 
     print(f"[UWB] Initial Orientation: {state_manager.remote_state.orientation_est:.2f}")
     
-    
-
+    time.sleep(10)  # wait for initial state
+    walk_me()
     
 
     
