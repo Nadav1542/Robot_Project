@@ -1,36 +1,47 @@
-Quick Start
+This document outlines the **Quick Start** instructions for setting up your development environment to communicate with the **Unitree Go2** robot. This involves system environment recommendations and crucial network configuration steps.
 
-Environment Dependencies
-System environment
+-----
 
-It is recommended to use the Ubuntu 20.04 system for development. Development on Mac and Windows systems is currently not supported, and development on the built-in computer of Go2 is also not supported.
-Network environment
+## 💻 System Environment Dependencies
 
-It is necessary to set the network card in the user's computer that communicates with the Go2 robot under the 123 network segment, and the recommended IP address of the network card is 192.168.123.222 ("222" can be changed to other).
-It is not allowed to set the IP address of the network card to 192.168.123.161, which is the built-in computer IP address of the Go2 robot.
+To ensure a smooth development process, adhere to the following system requirements:
 
-Configure network environment
+  * **Recommended OS:** Use **Ubuntu 20.04** for development.
+  * **Unsupported OS/Environments:**
+      * Development on **Mac** and **Windows** systems is **not currently supported**.
+      * Development directly on the **built-in computer of the Go2 robot** is **not supported**.
 
-When running the routine, control commands will be sent from the user's computer to the built-in computer of the Go2 robot through the local area network.
-Therefore, before this, necessary configuration steps need to be taken to form a local area network between these two computers.
+-----
 
-Configuration steps:
+## 🌐 Network Environment Configuration
 
-1. Connect one end of the network cable to the Go2 robot, and the other end to the user's computer.
-2. Turn on the USB Ethernet of the computer and configure it.
-The IP address of the onboard computer of the machine dog is 192.168.123.161, so it is necessary to set the USB Ethernet address of the computer to the same network segment as the machine dog.
-For example, entering 192.168.123.222 ("222" can be changed to other) in the Address field.
-3. Change the 'netmask' field to 255.255.255.0
+Communication between your computer and the Go2 robot's built-in computer occurs over a local area network (LAN). Therefore, you must configure your computer's network interface to be on the same network segment as the robot.
 
-example:
-https://doc-cdn.unitree.com/static/2023/9/6/0f51cb9b12f94f0cb75070d05118c00a_980x816.jpg
+### Network Requirements
 
-This setup is required for communication with the robot.
+  * **Network Segment:** Your computer's network card must be set within the **192.168.123.x** (the "123 network segment").
+  * **Recommended IP:** The recommended IP address for your computer's network card is **192.168.123.222** (the last octet, "222", can be changed to any valid number in the segment).
+  * **Prohibited IP:** Do **not** set your computer's IP address to **192.168.123.161**, as this is the fixed IP address of the Go2 robot's built-in computer.
 
-To test whether the user's computer is properly connected to the built-in computer of the Go2 robot, you can enter ping 192.168.123.161 in the terminal for testing.
-The connection is successful when something similar to the following appears.
+### Configuration Steps (USB Ethernet)
 
-https://doc-cdn.unitree.com/static/2023/8/31/393207d38e3a49cda738a418036ae8f0_1088x438.png
+Follow these steps to establish the required LAN connection:
 
+1.  **Physical Connection:** Connect one end of a network cable to the **Go2 robot** and the other end to your **user's computer**.
+2.  **Access Network Settings:** Turn on and configure the **USB Ethernet** interface on your computer.
+3.  **Set IP Address:** Set the USB Ethernet's address to the same network segment as the robot (which has the IP **192.168.123.161**).
+      * Enter a valid IP address, such as **192.168.123.222**, in the **Address** field. (Remember, you can change the last number).
+4.  **Set Netmask:** Change the **'netmask'** field to **255.255.255.0**.
 
+-----
 
+## ✅ Testing the Connection
+
+After configuring the network, you should verify the connection between your computer and the Go2 robot.
+
+1.  **Open Terminal:** Open a terminal window on your computer.
+2.  **Run Ping Test:** Enter the following command to ping the robot's built-in computer:
+    ```bash
+    ping 192.168.123.161
+    ```
+3.  **Successful Connection:** The connection is successful if you receive a reply, which will show something similar to: .
