@@ -29,7 +29,6 @@ You must create a Local Area Network (LAN) between your computer and the robot t
 | :--- | :--- | :--- |
 | **Robot IP** | **192.168.123.161** | This is the fixed IP of the Go2 robot's built-in computer. |
 | **Computer IP** | **192.168.123.x** | Must be in the **192.168.123.x** segment. **192.168.123.222** is recommended. |
-| **Prohibited IP** | **192.168.123.161** | Do **not** use the robot's IP for your computer. |
 | **Netmask** | **255.255.255.0** | |
 
 ### Configuration Steps (USB Ethernet)
