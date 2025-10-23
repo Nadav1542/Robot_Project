@@ -51,7 +51,14 @@ Verify that your computer can communicate with the robot.
     ```
 3.  **Confirm Success:** The connection is successful if you receive replies in the terminal output.
 
------
+----
+
+
+  -------------------create venv------------------
+
+
+
+
 
 ## 🚀 4. Install and Test the SDK
 
@@ -85,6 +92,4 @@ Finally, clone your specific project repository into your workspace.
     cd GO2
     ```
 
------
-
-You are now set up to start developing\! Do you need instructions on how to install the Python SDK itself?
+  --------run the project with XXXXXX------------
