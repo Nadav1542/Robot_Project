@@ -13,43 +13,30 @@ from unitree_sdk2py.go2.obstacles_avoid.obstacles_avoid_client import ObstaclesA
 from unitree_sdk2py.go2.sport.sport_client import SportClient
 from uwb_state_manager import UwbStateManager
 from uwb_button_monitor import UwbButtonMonitor
-
+from ultralytics import YOLO
 
 # ---------- Config ----------
 CAM_TIMEOUT_SEC = 2.0
 WIN_NAME = "GO2 Camera"
 
-
 # ---------- Follow loop (runs in a background thread) ----------
 def follow_loop(state_manager: UwbStateManager,
                 avoid_client: ObstaclesAvoidClient,
                 stop_event: threading.Event):
-    """
-    Robot moves while trying to keep distance/orientation to the UWB remote.
-    Exits cleanly when stop_event is set.
-    """
-    # Distance control
+    # (unchanged)
     MAX_VX = 0.9
     DEAD_BAND_D = 1.2
     DIST_SLOWDOWN = 1.0
-
-    # Orientation control
     MAX_WZ = 0.96
     DEAD_BAND_O = 0.20
     SLOWDOWN_ANGLE = math.radians(60)
-
     DT = 0.04  # 25 Hz
-
     while not stop_event.is_set():
-        # Read UWB estimates (may be None or stale early on; guard it)
         dis = getattr(state_manager.remote_state, "distance_est", None)
         ori = getattr(state_manager.remote_state, "orientation_est", None)
-
         if dis is None or ori is None:
             time.sleep(DT)
             continue
-
-        # Distance error
         err_d = dis
         if abs(err_d) <= DEAD_BAND_D:
             vx = 0.0
@@ -57,8 +44,6 @@ def follow_loop(state_manager: UwbStateManager,
             scale = min(abs(err_d) / DIST_SLOWDOWN, 1.0)
             vx = math.copysign(MAX_VX * scale, err_d)
             vx = max(-MAX_VX, min(MAX_VX, vx))
-
-        # Orientation error
         err_o = ori
         if abs(err_o) <= DEAD_BAND_O:
             wz = 0.0
@@ -66,31 +51,24 @@ def follow_loop(state_manager: UwbStateManager,
             scale = min(abs(err_o) / SLOWDOWN_ANGLE, 1.0)
             wz = math.copysign(MAX_WZ * scale, err_o)
             wz = max(-MAX_WZ, min(MAX_WZ, wz))
-
         try:
             avoid_client.Move(vx, 0.0, wz)
         except Exception as e:
             print(f"[FOLLOW] Move error: {e}")
-
         time.sleep(DT)
-
-    # On exit, stop motion
     try:
         avoid_client.Move(0.0, 0.0, 0.0)
     except Exception:
         pass
 
-
 # ---------- Camera wrapper ----------
 class Camera:
-    """Interface to the robot's camera."""
     def __init__(self, timeout_sec: float = CAM_TIMEOUT_SEC):
         self.client = VideoClient()
         self.client.SetTimeout(timeout_sec)
         self.client.Init()
 
     def get_frame(self):
-        """Return BGR frame as np.ndarray or None."""
         try:
             code, data = self.client.GetImageSample()
             if code == 0 and data:
@@ -109,15 +87,11 @@ class Camera:
         except Exception:
             pass
 
-
 # ---------- Global stop event & SIGINT handler ----------
 stop_event = threading.Event()
-
 def handle_sigint(signum, frame):
-    """Handle Ctrl+C gracefully."""
     print("\n[SYS] Ctrl+C detected — stopping...")
     stop_event.set()
-
 
 # ---------- Main ----------
 def main():
@@ -138,7 +112,6 @@ def main():
     avoid_client.UseRemoteCommandFromApi(True)
     avoid_client.SwitchSet(True)
 
-    # Small settle time for UWB
     time.sleep(1.0)
     try:
         print(f"[UWB] Initial Orientation: {state_manager.remote_state.orientation_est:.2f}")
@@ -156,11 +129,19 @@ def main():
 
     # Init camera (keep UI in main thread)
     cam = Camera(timeout_sec=CAM_TIMEOUT_SEC)
+
+    # >>> CHANGED: prefer model.names in current ultralytics versions
+    model = YOLO("yolov8n.pt")
+    names = model.names  # >>> CHANGED
+
+    # >>> ADDED: optional inference params
+    CONF_THRES = 0.5      # >>> ADDED
+    IOU_THRES = 0.45      # >>> ADDED
+
     cv2.namedWindow(WIN_NAME, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(WIN_NAME, 960, 540)
     print("[CAM] Streaming... Press 'q' or Ctrl+C to exit.")
 
-    # Camera/display loop in main thread
     last_t = time.time()
     frames = 0
     fps_t0 = last_t
@@ -169,53 +150,66 @@ def main():
         while not stop_event.is_set():
             frame = cam.get_frame()
             if frame is not None:
-                cv2.imshow(WIN_NAME, frame)
-                frames += 1
 
-                # Lightweight FPS report every ~2s
-                now = time.time()
-                if now - fps_t0 >= 2.0:
-                    fps = frames / (now - fps_t0)
-                    print(f"[CAM] ~{fps:.1f} FPS")
-                    fps_t0 = now
-                    frames = 0
+                # >>> ADDED: run YOLO on the current frame
+                results = model(frame, conf=CONF_THRES, iou=IOU_THRES, verbose=False)[0]  # >>> ADDED
 
-            # Allow GUI events and 'q' quit
+                # >>> ADDED: draw detections
+                if results.boxes is not None:  # >>> ADDED
+                    for box in results.boxes:  # >>> ADDED
+                        x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())  # >>> ADDED
+                        cls_id = int(box.cls[0].item()) if box.cls is not None else -1  # >>> ADDED
+                        conf = float(box.conf[0].item()) if box.conf is not None else 0.0  # >>> ADDED
+                        label = f"{names.get(cls_id, str(cls_id))} {conf:.2f}"  # >>> ADDED
+
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)  # >>> ADDED
+                        cv2.putText(frame, label, (x1, max(0, y1 - 8)),          # >>> ADDED
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1,
+                                    cv2.LINE_AA)
+
+                # >>> ADDED: simple FPS overlay
+                frames += 1  # >>> ADDED
+                now = time.time()  # >>> ADDED
+                if now - fps_t0 >= 2.0:  # >>> ADDED
+                    fps = frames / (now - fps_t0)  # >>> ADDED
+                    print(f"[CAM] ~{fps:.1f} FPS")  # >>> ADDED
+                    fps_t0 = now  # >>> ADDED
+                    frames = 0  # >>> ADDED
+                cv2.putText(frame, f"Press 'q' to quit", (10, 25),  # >>> ADDED
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2,
+                            cv2.LINE_AA)
+
+                # >>> CHANGED: show annotated frame (not the raw frame)
+                cv2.imshow(WIN_NAME, frame)  # >>> CHANGED
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 stop_event.set()
                 break
 
-            # Prevent busy loop if no frames
             if frame is None:
                 time.sleep(0.01)
 
     finally:
-        # Signal stop and cleanup
         stop_event.set()
         try:
             t_follow.join(timeout=1.5)
         except Exception:
             pass
-
         try:
             avoid_client.Move(0.0, 0.0, 0.0)
         except Exception:
             pass
-
         try:
             avoid_client.UseRemoteCommandFromApi(False)
             avoid_client.SwitchSet(False)
         except Exception:
             pass
-
         cam.close()
         try:
             cv2.destroyAllWindows()
         except Exception:
             pass
-
         print("[SYS] Shutdown complete.")
-
 
 if __name__ == "__main__":
     main()
