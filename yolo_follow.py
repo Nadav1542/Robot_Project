@@ -82,15 +82,7 @@ def handle_sigint(signum, frame):
     print("\n[SYS] Ctrl+C detected — stopping...")
     stop_event.set()
 
-def iou(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) -> float:
-    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
-    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
-    iw, ih = max(0, ix2 - ix1), max(0, iy2 - iy1)
-    inter = iw * ih
-    a = max(0, ax2 - ax1) * max(0, ay2 - ay1)
-    b = max(0, bx2 - bx1) * max(0, by2 - by1)
-    denom = a + b - inter
-    return inter / denom if denom > 0 else 0.0
+
 
 
 # -------------------- Main (YOLO + State machine) --------------------
