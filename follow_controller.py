@@ -98,22 +98,15 @@ class FollowController:
                 vx_t = vx_follow
                 wz_t = wz_follow
 
-            # Low-pass smoothing + clamps
-            vx_cmd = (1 - self.cfg.SMOOTH_ALPHA) * vx_cmd + self.cfg.SMOOTH_ALPHA * vx_t
-            wz_cmd = (1 - self.cfg.SMOOTH_ALPHA) * wz_cmd + self.cfg.SMOOTH_ALPHA * wz_t
-            vx_cmd = max(-self.cfg.MAX_VX, min(self.cfg.MAX_VX, vx_cmd))
-            wz_cmd = max(-self.cfg.MAX_WZ, min(self.cfg.MAX_WZ, wz_cmd))
 
             # Send command
             try:
-                self.avoid_client.Move(vx_cmd, 0.0, wz_cmd)
+                self.avoid_client.Move(vx_t, 0.0, wz_t)
             except Exception as e:
                 print(f"[FOLLOW MOVE] Error: {e}")
 
             time.sleep(self.cfg.FOLLOW_DT)
 
         # Stop safely when loop exits
-        try:
-            self.avoid_client.Move(0.0, 0.0, 0.0)
-        except Exception:
-            pass
+        self.avoid_client.Move(0.0, 0.0, 0.0)
+

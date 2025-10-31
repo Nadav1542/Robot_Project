@@ -33,7 +33,7 @@ CAM_TIMEOUT_SEC   = 2.0
 # YOLO/ROI config
 MIN_CONF          = 0.35
 MIN_BOX_FRAC      = 0.05
-ROI_NORM          = (0.33, 0.12, 0.67, 0.88)
+ROI_NORM = (0.33, 0.02, 0.67, 0.98)
 SIZE_TOL          = 0.08
 CENTER_TOL        = 0.10
 
@@ -103,7 +103,6 @@ def main():
     sport.Init()
     avoid.UseRemoteCommandFromApi(True)
     avoid.SwitchSet(True)
-
     # Start background follow controller
     follow_cfg = FollowConfig(
         SMOOTH_ALPHA=SMOOTH_ALPHA,
@@ -174,7 +173,7 @@ def main():
                 clss  = res.boxes.cls.cpu().numpy().astype(int)
                 confs = res.boxes.conf.cpu().numpy()
                 for (x1, y1, x2, y2), cid, p in zip(boxes, clss, confs):
-                    if names.get(int(cid), "") != "chair" or p < MIN_CONF:
+                    if names.get(int(cid), "") != "potted plant" or p < MIN_CONF:
                         continue
                     if (y2 - y1) < (MIN_BOX_FRAC * h):
                         continue
@@ -220,7 +219,7 @@ def main():
                     if abs(ex) < CENTER_TOL:
                         wz_t = 0.0
                     else:
-                        wz_t = -K_WZ * ex
+                        wz_t = -ex
 
                     # forward/back
                     if abs(ey) < SIZE_TOL:
@@ -244,6 +243,7 @@ def main():
                 behavior["wz"] = 0.0
                 if now - last_announce >= 1.0:
                     print("Found chair — holding position…")
+                    sport.Hello() ## trying maybe sport.WiggleHips()
                     last_announce = now
                 if now >= hold_until:
                     print("Found chair — returning to follow.")
@@ -272,27 +272,25 @@ def main():
 
     finally:
         stop_event.set()
-        try:
-            avoid.Move(0.0, 0.0, 0.0)
-        except Exception:
-            pass
-        try:
-            avoid.UseRemoteCommandFromApi(False)
-            avoid.SwitchSet(False)
-        except Exception:
-            pass
+        
+        avoid.Move(0.0, 0.0, 0.0)
+        
+        avoid.UseRemoteCommandFromApi(False)
+        
         cam.close()
-        try:
-            cv2.destroyAllWindows()
-        except Exception:
-            pass
+       
+        cv2.destroyAllWindows()
+       
         # Optionally join the controller thread before exit
-        try:
-            follower.join(timeout=1.0)
-        except Exception:
-            pass
+        
+        follower.join(timeout=1.0)
+        
         print("[SYS] Shutdown complete.")
 
 
 if __name__ == "__main__":
     main()
+
+
+
+	
