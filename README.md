@@ -163,3 +163,73 @@ Threaded Execution – allows continuous following without blocking other robot 
 Smooth Motion – uses proportional scaling and deadbands to reduce jitter and noise effects.
 
 Behavior Integration – seamlessly switches between following and object-approach logic through the shared behavior variable.
+
+
+
+
+Object Approach and Hold Algorithm
+
+The APPROACH mode controls the robot’s motion when an object of interest (e.g., a chair) has been detected and locked by the vision system. Its purpose is to guide the robot smoothly toward the target until it reaches an appropriate distance, after which it transitions into a short HOLD phase before returning to follow mode.
+
+Algorithm Overview
+
+Lock Maintenance
+When in "APPROACH" mode, the algorithm first checks whether the visual lock (lock.active) on the target object is still valid.
+
+If the lock is lost or no bounding box is available, the robot switches back to "FOLLOW" mode.
+
+If the lock is valid, it updates the target position using the latest detection candidates.
+
+Target Localization
+From the bounding box (x1, y1, x2, y2) of the locked object, the algorithm computes:
+
+The center of the object (cx).
+
+The bounding box height (bh), which represents the object’s apparent size.
+
+The horizontal error ex, defined as the normalized offset between the object’s center and the image’s center (roi_cx).
+
+The distance error ey, estimated by comparing the object’s size to the region of interest (roi_h).
+
+Positive ey → the object appears small → robot should move forward.
+
+Negative ey → object too close → robot should move backward.
+
+Motion Control
+Based on the computed errors:
+
+Yaw control (wz_t):
+
+If |ex| < CENTER_TOL, no rotation is applied.
+
+Otherwise, the robot rotates proportionally to the horizontal offset (wz_t = -ex).
+
+Forward/Backward control (vx):
+
+If |ey| < SIZE_TOL, the robot considers the target reached.
+It sets both velocities to zero and switches to "HOLD" mode.
+
+If ey > 0, it moves forward proportionally to the distance error.
+
+If ey < 0, it moves backward to maintain distance.
+
+All commands are clamped to safe limits (MAX_WZ, K_VX_FWD, K_VX_BACK) to ensure stability.
+
+HOLD Mode Behavior
+In "HOLD" mode, the robot stops (vx = wz = 0) and maintains position for a short duration (HOLD_SECONDS).
+
+During this phase, it may perform a brief action (e.g., sport.Hello() or sport.WiggleHips()).
+
+After the hold period, it prints a status message and transitions back to "FOLLOW" mode.
+
+The lock is reset and a short cooldown is applied (COOLDOWN_SECONDS) before the next approach cycle.
+
+Key Features
+
+Smooth vision-based positioning using bounding box geometry.
+
+Automatic fallback to follow mode if the target is lost.
+
+HOLD phase provides stable confirmation and user feedback before resuming movement.
+
+Integrated with the shared behavior state, ensuring seamless coordination with the UWB follow controller.
