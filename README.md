@@ -93,3 +93,73 @@ Finally, clone your specific project repository into your workspace.
     ```
 
   --------run the project with XXXXXX------------
+
+
+
+
+  Code Flow Overview
+
+The robot operates by tracking a UWB remote carried by the user. When it detects an object of a specified type, it switches to an approach mode toward that object, and once the interaction is complete, it returns to user-following mode.
+
+At any given moment, there are two threads running in parallel:
+
+One thread is responsible for tracking the user.
+
+The other handles object classification in the incoming frames.
+
+The frames are provided by a separate class called Camera, and the classification is performed using an existing YOLO model.
+
+The coordination between the two threads is managed through a shared variable named behavior, which determines the robot’s active state.
+
+
+UWB Follow Algorithm
+
+The FollowController class implements the robot’s UWB-based walking logic, responsible for continuously adjusting its position and orientation relative to the UWB remote carried by the user.
+
+Algorithm Overview
+
+The controller runs in a background thread and repeatedly performs the following steps:
+
+Read UWB Measurements
+The robot receives two main values from the UWB system:
+
+distance_est — estimated distance to the remote.
+
+orientation_est — estimated angle of the remote relative to the robot’s heading (ranging from -π to π).
+
+Distance Control (vx_follow)
+The robot computes a forward velocity based on the distance error (err_d).
+
+If the distance is within a deadband (DEAD_BAND_D), the robot stops moving forward.
+
+Otherwise, it moves toward or away from the remote, with velocity scaled proportionally to the distance (up to MAX_VX_FOLLOW).
+
+The scaling ensures smooth acceleration and deceleration using the parameter DIST_SLOWDOWN.
+
+Orientation Control (wz_follow)
+Similarly, the robot adjusts its rotational velocity based on the orientation error (err_o).
+
+When the angle is within a deadband (DEAD_BAND_O), no rotation occurs.
+
+For larger deviations, the angular velocity is scaled by SLOWDOWN_ANGLE and limited by MAX_WZ_FOLLOW.
+
+Behavior-Based Blending
+The final movement command depends on the robot’s current behavior mode, stored in the shared behavior dictionary:
+
+In "FOLLOW" mode — the robot uses the computed UWB-based velocities (vx_follow, wz_follow).
+
+In "APPROACH" or "HOLD" mode — it instead uses externally provided target velocities (behavior["vx"], behavior["wz"]).
+
+Command Execution
+The resulting velocity commands are sent to the motion controller (avoid_client.Move(vx, 0, wz)), and the process repeats at a fixed control rate (FOLLOW_DT, typically 25 Hz).
+
+Safe Stop
+When the stop event is triggered, the controller sends a zero-velocity command to safely halt the robot.
+
+Key Features
+
+Threaded Execution – allows continuous following without blocking other robot behaviors.
+
+Smooth Motion – uses proportional scaling and deadbands to reduce jitter and noise effects.
+
+Behavior Integration – seamlessly switches between following and object-approach logic through the shared behavior variable.
